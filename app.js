@@ -420,7 +420,19 @@ function bindEvents() {
     }
 }
 
-function switchNavTab(tabId) {
+// รหัสผ่านสำหรับเข้าสู่การตั้งค่า Sheet & API
+const SETTINGS_PIN = '11278';
+
+function switchNavTab(tabId, bypassAuth = false) {
+    // ตรวจสอบรหัสผ่านก่อนเข้าแท็บ settings
+    if (tabId === 'settings' && !bypassAuth) {
+        const isUnlocked = sessionStorage.getItem('pct_settings_unlocked') === 'true';
+        if (!isUnlocked) {
+            openSettingsAuthModal();
+            return;
+        }
+    }
+
     STATE.currentTab = tabId;
 
     // Update Sidebar active state
@@ -437,6 +449,57 @@ function switchNavTab(tabId) {
     closeMobileSidebar();
 
     renderCurrentTab();
+}
+
+function openSettingsAuthModal() {
+    const input = document.getElementById('settingsPinInput');
+    if (input) {
+        input.value = '';
+        input.classList.remove('is-invalid', 'shake');
+    }
+    const errorEl = document.getElementById('authPinError');
+    if (errorEl) errorEl.style.display = 'none';
+
+    const modalEl = document.getElementById('settingsAuthModal');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        setTimeout(() => { if (input) input.focus(); }, 400);
+    }
+}
+
+function verifySettingsPin() {
+    const input = document.getElementById('settingsPinInput');
+    const pin = input ? input.value.trim() : '';
+    const errorEl = document.getElementById('authPinError');
+
+    if (pin === SETTINGS_PIN) {
+        sessionStorage.setItem('pct_settings_unlocked', 'true');
+        const modalEl = document.getElementById('settingsAuthModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+        switchNavTab('settings', true);
+        showToast('ยืนยันรหัสผ่านถูกต้อง เข้าสู่หน้าตั้งค่า', 'success');
+    } else {
+        if (errorEl) {
+            errorEl.textContent = '❌ รหัสผ่านไม่ถูกต้อง กรุณาระบุรหัสผ่านที่ถูกต้อง (11278)';
+            errorEl.style.display = 'block';
+        }
+        if (input) {
+            input.classList.add('is-invalid', 'shake');
+            input.value = '';
+            setTimeout(() => input.classList.remove('shake'), 450);
+            input.focus();
+        }
+    }
+}
+
+function lockSettings() {
+    sessionStorage.removeItem('pct_settings_unlocked');
+    switchNavTab('overview');
+    showToast('ล็อกหน้าตั้งค่าเรียบร้อยแล้ว', 'info');
 }
 
 function toggleSidebar() {
@@ -571,32 +634,105 @@ function renderOverviewTab() {
     renderOverviewCharts(d26);
 }
 
-function renderTracerHighlights(items) {
-    // Find key KPIs
-    const strokeFT = items.find(i => i.kpi.includes('Stroke Fast Track') && i.kpi.includes('30'));
-    const strokeMort = items.find(i => i.kpi.includes('Stroke') && i.kpi.includes('เสียชีวิต'));
-    const sepsisMort = items.find(i => i.kpi.includes('sepsis') && i.kpi.includes('เสียชีวิต'));
-    const copdSpray = items.find(i => i.kpi.includes('COPD') && i.kpi.includes('พ่นถูกต้อง'));
-    const medError = items.find(i => i.kpi.includes('คลาดเคลื่อนทางยา'));
-    const idError = items.find(i => i.kpi.includes('ระบุตัวผู้ป่วยผิดพลาด'));
+const DEFAULT_HIGHLIGHT_PRESETS = {
+    emergency: [
+        { slot: 1, kpi_id: 'd26_4', title: 'Stroke Fast Track (<30m)', default_target: '>80%' },
+        { slot: 2, kpi_id: 'd26_3', title: 'Stroke เสียชีวิตใน รพ.', default_target: '<7%' },
+        { slot: 3, kpi_id: 'd26_22', title: 'Sepsis Shock เสียชีวิต', default_target: '<5%' },
+        { slot: 4, kpi_id: 'd26_39', title: 'COPD ใช้ยาพ่นถูกต้อง', default_target: '≥80%' },
+        { slot: 5, kpi_id: 'd26_81', title: '2P Safety คลาดเคลื่อนทางยา', default_target: '0 เคส' },
+        { slot: 6, kpi_id: 'd26_96', title: 'Unexpected Death IPD', default_target: 'เฝ้าระวัง' }
+    ],
+    ncds: [
+        { slot: 1, kpi_id: 'd26_27', title: 'DM ควบคุมระดับน้ำตาลได้ดี', default_target: '≥40%' },
+        { slot: 2, kpi_id: 'd26_33', title: 'HT ควบคุมความดันได้ดี', default_target: '≥60%' },
+        { slot: 3, kpi_id: 'd26_34', title: 'HT เกิดภาวะแทรกซ้อน Stroke', default_target: '<2%' },
+        { slot: 4, kpi_id: 'd26_36', title: 'CKD eGFR ลดลง ≤5 ml/min', default_target: '≥70%' },
+        { slot: 5, kpi_id: 'd26_26', title: 'DM ขาดนัด', default_target: '<10%' },
+        { slot: 6, kpi_id: 'd26_35', title: 'HT คัดกรองอายุ 35 ปีขึ้นไป', default_target: '≥90%' }
+    ],
+    mch: [
+        { slot: 1, kpi_id: 'd26_48', title: 'คลอดก่อนกำหนด', default_target: '<10%' },
+        { slot: 2, kpi_id: 'd26_49', title: 'ตกเลือดหลังคลอด', default_target: '<2%' },
+        { slot: 3, kpi_id: 'd26_50', title: 'ทารกแรกเกิดน้ำหนัก < 2,500g', default_target: '<7%' },
+        { slot: 4, kpi_id: 'd26_70', title: 'ผู้สูงอายุ ADL เพิ่มขึ้น', default_target: 'เฝ้าระวัง' },
+        { slot: 5, kpi_id: 'd26_68', title: 'ผู้สูงอายุ DM คุมน้ำตาลได้ดี', default_target: 'เฝ้าระวัง' },
+        { slot: 6, kpi_id: 'd26_93', title: 'อาหาร/อุปกรณ์ผ่านตรวจมาตรฐาน', default_target: '100%' }
+    ],
+    safety: [
+        { slot: 1, kpi_id: 'd26_74', title: 'ระบุตัวผู้ป่วยผิดพลาด ระดับ E', default_target: '0 เคส' },
+        { slot: 2, kpi_id: 'd26_81', title: 'คลาดเคลื่อนทางยา ระดับ E', default_target: '0 เคส' },
+        { slot: 3, kpi_id: 'd26_76', title: 'ให้เลือดผิดพลาด', default_target: '0 เคส' },
+        { slot: 4, kpi_id: 'd26_77', title: 'รายงานผล Lab ผิดพลาดระดับ E', default_target: '0 เคส' },
+        { slot: 5, kpi_id: 'd26_78', title: 'ผ่าตัดผิดคน/ผิดข้าง/ผิดหัตถการ', default_target: '0 เคส' },
+        { slot: 6, kpi_id: 'd26_91', title: 'อุบัติการณ์ปนเปื้อนในอาหาร', default_target: '0 เคส' }
+    ]
+};
 
-    if (document.getElementById('hlStrokeFT')) {
-        document.getElementById('hlStrokeFT').textContent = (strokeFT ? (strokeFT.avg || '100%') : '100%') + (strokeFT && !strokeFT.avg.includes('%') ? '%' : '');
+function getCustomHighlightsConfig() {
+    const saved = localStorage.getItem('pct_custom_highlights');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {}
     }
-    if (document.getElementById('hlStrokeMort')) {
-        document.getElementById('hlStrokeMort').textContent = (strokeMort ? strokeMort.avg : '0%') + '%';
-    }
-    if (document.getElementById('hlSepsisMort')) {
-        document.getElementById('hlSepsisMort').textContent = (sepsisMort ? sepsisMort.avg : '0%') + '%';
-    }
-    if (document.getElementById('hlCopdSpray')) {
-        document.getElementById('hlCopdSpray').textContent = (copdSpray ? Math.round(parseFloat(copdSpray.avg || '82.2')) : 82) + '%';
-    }
-    if (document.getElementById('hlSafetyErrors')) {
-        const medVal = medError ? parseFloat(medError.avg || '0') : 0;
-        const idVal = idError ? parseFloat(idError.avg || '0') : 0;
-        document.getElementById('hlSafetyErrors').textContent = (medVal + idVal) + ' เคส';
-    }
+    return DEFAULT_HIGHLIGHT_PRESETS.emergency;
+}
+
+function renderTracerHighlights(items) {
+    const container = document.getElementById('quickHighlightsContainer');
+    if (!container) return;
+
+    const configs = getCustomHighlightsConfig();
+    
+    container.innerHTML = configs.map((cfg, idx) => {
+        let kpiItem = null;
+        if (cfg.kpi_id) {
+            kpiItem = items.find(i => i.id === cfg.kpi_id);
+        }
+        // Fallback match by keyword
+        if (!kpiItem && cfg.title) {
+            kpiItem = items.find(i => i.kpi.includes(cfg.title) || cfg.title.includes(i.kpi.substring(0, 15)));
+        }
+
+        const title = cfg.title || (kpiItem ? kpiItem.kpi : `จุดเน้นที่ ${idx + 1}`);
+        const val = kpiItem ? (kpiItem.avg || (kpiItem.computed_avg !== null ? kpiItem.computed_avg : '-')) : '-';
+        const target = kpiItem ? (kpiItem.target || cfg.default_target || '') : (cfg.default_target || '');
+        const status = kpiItem ? kpiItem.status : 'normal';
+        const kpiId = kpiItem ? kpiItem.id : '';
+
+        let valDisplay = val;
+        if (val !== '-' && !String(val).includes('%') && (target.includes('%') || target.startsWith('>') || target.startsWith('<') || target === '100')) {
+            valDisplay = val + '%';
+        }
+
+        let badgeHtml = '';
+        let valColorClass = 'text-primary';
+        if (status === 'pass') {
+            badgeHtml = `<small class="text-success"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์ ${escapeHtml(target)}</small>`;
+            valColorClass = 'text-success';
+        } else if (status === 'fail') {
+            badgeHtml = `<small class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> ตกเกณฑ์ ${escapeHtml(target)}</small>`;
+            valColorClass = 'text-danger';
+        } else if (status === 'normal') {
+            badgeHtml = `<small class="text-info"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(target ? target : 'ปกติ')}</small>`;
+            valColorClass = 'text-info';
+        } else {
+            badgeHtml = `<small class="text-muted">${escapeHtml(target ? 'เกณฑ์: ' + target : 'ไม่มีข้อมูล')}</small>`;
+            valColorClass = 'text-muted';
+        }
+
+        return `
+            <div class="col-lg-2 col-md-4 col-6">
+                <div class="card card-custom p-3 text-center h-100" style="cursor: pointer; transition: transform 0.2s;" onclick="if('${kpiId}') openKpiModal('${kpiId}')" title="คลิกเพื่อดูรายละเอียด 12 เดือน">
+                    <div class="small text-muted mb-1 text-truncate" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+                    <h4 class="fw-bold mb-0 ${valColorClass}">${escapeHtml(valDisplay)}</h4>
+                    ${badgeHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderOverviewCharts(items) {
@@ -1020,6 +1156,131 @@ function renderSettingsTab() {
     const checkGviz = document.getElementById('checkDirectGviz');
     const isGviz = localStorage.getItem(APP_CONFIG.DIRECT_GVIZ_STORAGE_KEY) !== 'false';
     if (checkGviz) checkGviz.checked = isGviz;
+
+    // Render Highlight Settings slots
+    renderHighlightSettings();
+}
+
+function renderHighlightSettings() {
+    const container = document.getElementById('highlightSlotsContainer');
+    if (!container) return;
+
+    const items = STATE.rawData.data2026 || [];
+    const configs = getCustomHighlightsConfig();
+
+    // Group items by group for optgroup
+    const groups = {};
+    items.forEach(i => {
+        const g = i.group || 'อื่น ๆ';
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(i);
+    });
+
+    let html = '';
+    for (let slot = 1; slot <= 6; slot++) {
+        const currentCfg = configs[slot - 1] || { slot: slot, kpi_id: '', title: '' };
+        
+        let optionsHtml = '<option value="">-- เลือกตัวชี้วัด --</option>';
+        Object.keys(groups).forEach(g => {
+            optionsHtml += `<optgroup label="หมวด ${escapeHtml(g)}">`;
+            groups[g].forEach(item => {
+                const isSelected = item.id === currentCfg.kpi_id ? 'selected' : '';
+                optionsHtml += `<option value="${item.id}" ${isSelected}>${escapeHtml(item.kpi.substring(0, 65))}</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+        });
+
+        html += `
+            <div class="col-xl-4 col-md-6">
+                <div class="highlight-slot-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-primary-subtle text-primary fw-bold">การ์ดที่ ${slot}</span>
+                        <small class="text-muted">Slot ${slot}</small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">เลือกตัวชี้วัดจาก data2026:</label>
+                        <select id="slot_kpi_${slot}" class="form-select form-select-sm" onchange="onSlotKpiChange(${slot})">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted mb-1">ชื่อหัวข้อแสดงบนการ์ด:</label>
+                        <input type="text" id="slot_title_${slot}" class="form-control form-control-sm" value="${escapeHtml(currentCfg.title || '')}" placeholder="ใส่ชื่อสั้น ๆ เพื่อแสดงบนการ์ด">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function onSlotKpiChange(slot) {
+    const select = document.getElementById(`slot_kpi_${slot}`);
+    const titleInput = document.getElementById(`slot_title_${slot}`);
+    if (!select || !titleInput) return;
+
+    const selectedId = select.value;
+    if (!selectedId) return;
+
+    const item = (STATE.rawData.data2026 || []).find(i => i.id === selectedId);
+    if (item && (!titleInput.value || titleInput.value.trim() === '')) {
+        titleInput.value = item.kpi.substring(0, 30);
+    }
+}
+
+function applyHighlightPreset(presetName) {
+    const preset = DEFAULT_HIGHLIGHT_PRESETS[presetName];
+    if (!preset) return;
+
+    localStorage.setItem('pct_custom_highlights', JSON.stringify(preset));
+    renderHighlightSettings();
+    renderTracerHighlights(STATE.rawData.data2026 || []);
+    showToast(`ใช้ชุดตัวชี้วัดแนะนำ: ${getPresetLabel(presetName)} แล้ว`, 'success');
+}
+
+function getPresetLabel(name) {
+    switch (name) {
+        case 'emergency': return 'ฉุกเฉิน/วิกฤต';
+        case 'ncds': return 'NCDs/โรคเรื้อรัง';
+        case 'mch': return 'แม่และเด็ก & สูงอายุ';
+        case 'safety': return '2P Safety';
+        default: return name;
+    }
+}
+
+function saveHighlightSettings() {
+    const newConfigs = [];
+    const items = STATE.rawData.data2026 || [];
+
+    for (let slot = 1; slot <= 6; slot++) {
+        const select = document.getElementById(`slot_kpi_${slot}`);
+        const titleInput = document.getElementById(`slot_title_${slot}`);
+        const kpiId = select ? select.value : '';
+        let title = titleInput ? titleInput.value.trim() : '';
+
+        if (!title && kpiId) {
+            const item = items.find(i => i.id === kpiId);
+            if (item) title = item.kpi.substring(0, 30);
+        }
+
+        newConfigs.push({
+            slot: slot,
+            kpi_id: kpiId,
+            title: title || `จุดเน้นที่ ${slot}`
+        });
+    }
+
+    localStorage.setItem('pct_custom_highlights', JSON.stringify(newConfigs));
+    renderTracerHighlights(items);
+    showToast('บันทึกจุดเน้นคุณภาพเรียบร้อยแล้ว แสดงผลในหน้าแรกทันที', 'success');
+}
+
+function resetHighlightDefaults() {
+    localStorage.removeItem('pct_custom_highlights');
+    renderHighlightSettings();
+    renderTracerHighlights(STATE.rawData.data2026 || []);
+    showToast('คืนค่าจุดเน้นคุณภาพมาตรฐานเรียบร้อยแล้ว', 'info');
 }
 
 function saveSettings() {

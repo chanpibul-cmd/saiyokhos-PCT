@@ -161,20 +161,12 @@
                     <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
                         
                         <!-- Hero Banner -->
-                        <div class="hero-banner mb-4">
-                            <div class="row align-items-center">
-                                <div class="col-lg-8">
-                                    <h4 class="fw-bold mb-1">🏥 แดชบอร์ดติดตามคุณภาพและตัวชี้วัดทางคลินิก (PCT Quality Dashboard)</h4>
-                                    <p class="mb-2 opacity-90 small">
-                                        เชื่อมโยงข้อมูลสดจาก Google Sheet (แผ่นงาน <code>data2026</code> และ <code>allyear</code>) แสดงผลแบบ Real-time พร้อมวิเคราะห์ความสอดคล้องตามเกณฑ์มาตรฐาน HA & SAR
-                                    </p>
-                                    <div class="d-flex flex-wrap gap-2 mt-3">
-                                        <span class="badge bg-white text-dark"><i class="fa-solid fa-sheet-plastic text-success me-1"></i> ID: 1HROsaR5cYs...</span>
-                                        <span class="badge bg-white text-dark"><i class="fa-solid fa-shield-halved text-primary me-1"></i> 2P Safety Sentinel Alert</span>
-                                        <span class="badge bg-white text-dark"><i class="fa-solid fa-heart-pulse text-danger me-1"></i> Clinical Tracers</span>
-                                    </div>
+                        <div class="hero-banner mb-4 py-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-0">🏥 แดชบอร์ดติดตามคุณภาพและตัวชี้วัดทางคลินิก (PCT Quality Dashboard)</h4>
                                 </div>
-                                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                                <div>
                                     <div class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill shadow-sm" id="statPassRateBadge">
                                         กำลังประมวลผล...
                                     </div>
@@ -245,60 +237,18 @@
                             </div>
                         </div>
 
-                        <!-- Priority Clinical Tracer Cards -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-12">
-                                <h6 class="fw-bold mb-2 text-dark">
+                        <!-- Priority Clinical Tracer & Safety Cards (Dynamic Highlight) -->
+                        <div class="mb-4" id="quickHighlightsSection">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold mb-0 text-dark">
                                     <i class="fa-solid fa-bolt text-warning me-2"></i> สรุปผลลัพธ์ด่วน: Clinical Tracers & Patient Safety (จุดเน้นคุณภาพ)
                                 </h6>
+                                <button class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.78rem;" onclick="switchNavTab('settings')" title="เปลี่ยนตัวชี้วัดที่ต้องการแสดงผลที่นี่">
+                                    <i class="fa-solid fa-sliders me-1"></i> ตั้งค่าจุดเน้น
+                                </button>
                             </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">Stroke Fast Track (<30m)</div>
-                                    <h4 class="fw-bold text-success mb-0" id="hlStrokeFT">100%</h4>
-                                    <small class="text-success"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์ (>80%)</small>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">Stroke เสียชีวิตใน รพ.</div>
-                                    <h4 class="fw-bold text-success mb-0" id="hlStrokeMort">0%</h4>
-                                    <small class="text-success"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์ (<7%)</small>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">Sepsis Shock เสียชีวิต</div>
-                                    <h4 class="fw-bold text-success mb-0" id="hlSepsisMort">0%</h4>
-                                    <small class="text-success"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์ (<5%)</small>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">COPD ใช้ยาพ่นถูกต้อง</div>
-                                    <h4 class="fw-bold text-primary mb-0" id="hlCopdSpray">82.2%</h4>
-                                    <small class="text-primary"><i class="fa-solid fa-check"></i> ผ่านเกณฑ์ (≥80%)</small>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">2P Safety ผิดพลาดระดับ E</div>
-                                    <h4 class="fw-bold text-success mb-0" id="hlSafetyErrors">0 เคส</h4>
-                                    <small class="text-success"><i class="fa-solid fa-shield"></i> ปลอดภัย 100%</small>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-2 col-md-4 col-6">
-                                <div class="card card-custom p-3 text-center h-100">
-                                    <div class="small text-muted mb-1">Unexpected Death IPD</div>
-                                    <h4 class="fw-bold text-success mb-0">0.08%</h4>
-                                    <small class="text-muted">เฝ้าระวังต่อเนื่อง</small>
-                                </div>
+                            <div class="row g-3" id="quickHighlightsContainer">
+                                <!-- Populated dynamically by JS -->
                             </div>
                         </div>
 
@@ -542,6 +492,17 @@
                     <!-- ============================================================== -->
                     <div class="tab-pane fade" id="tab-settings" role="tabpanel">
                         
+                        <!-- Settings Header with Lock -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                            <div>
+                                <h5 class="fw-bold mb-0"><i class="fa-solid fa-sliders text-primary me-2"></i> จัดการระบบ & ตั้งค่าจุดเน้นคุณภาพ</h5>
+                                <p class="small text-muted mb-0">ระบบนี้ได้รับการป้องกันด้วยรหัสผ่านความปลอดภัย (PIN: 11278)</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="lockSettings()">
+                                <i class="fa-solid fa-lock me-1"></i> ล็อกการตั้งค่า (Lock)
+                            </button>
+                        </div>
+
                         <div class="row g-4">
                             <!-- Left: API Config -->
                             <div class="col-lg-6">
@@ -605,6 +566,44 @@
                             </div>
                         </div>
 
+                        <!-- Section: ตั้งค่าจุดเน้นคุณภาพ (Custom Highlights) -->
+                        <div class="row g-4 mt-1">
+                            <div class="col-12">
+                                <div class="card card-custom p-4">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                                        <div>
+                                            <h5 class="fw-bold mb-0">
+                                                <i class="fa-solid fa-bolt text-warning me-2"></i> ตั้งค่า "สรุปผลลัพธ์ด่วน: Clinical Tracers & Patient Safety (จุดเน้นคุณภาพ)"
+                                            </h5>
+                                            <p class="small text-muted mb-0">เลือกตัวชี้วัด 6 รายการจากแผ่นงาน <code>data2026</code> เพื่อนำไปแสดงเป็นการ์ดสรุปผลด่วนในหน้าแรก</p>
+                                        </div>
+                                        <!-- Presets -->
+                                        <div class="d-flex flex-wrap align-items-center gap-1">
+                                            <span class="small text-muted me-1">ชุดตัวชี้วัดแนะนำ:</span>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyHighlightPreset('emergency')">🚑 ฉุกเฉิน/วิกฤต</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyHighlightPreset('ncds')">🩺 NCDs/เรื้อรัง</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyHighlightPreset('mch')">👶 แม่และเด็ก</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyHighlightPreset('safety')">🛡️ 2P Safety</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 6 Slots Grid -->
+                                    <div class="row g-3" id="highlightSlotsContainer">
+                                        <!-- Slots 1 to 6 generated dynamically by JS -->
+                                    </div>
+
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top gap-2">
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="resetHighlightDefaults()">
+                                            <i class="fa-solid fa-rotate-left me-1"></i> คืนค่าจุดเน้นมาตรฐาน (Default)
+                                        </button>
+                                        <button class="btn btn-primary btn-sm px-4" onclick="saveHighlightSettings()">
+                                            <i class="fa-solid fa-floppy-disk me-1"></i> บันทึกจุดเน้นคุณภาพ
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                 </div>
@@ -659,6 +658,40 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS AUTHENTICATION MODAL (PIN: 11278)                     -->
+    <!-- ============================================================== -->
+    <div class="modal fade" id="settingsAuthModal" tabindex="-1" aria-labelledby="settingsAuthModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h6 class="modal-title fw-bold" id="settingsAuthModalLabel">
+                        <i class="fa-solid fa-shield-halved me-2"></i> ระบบยืนยันสิทธิ์การตั้งค่า
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="stat-icon bg-primary-subtle text-primary mx-auto mb-3" style="width: 56px; height: 56px; font-size: 1.5rem; border-radius: 50%;">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">กรุณาระบุรหัสผ่าน</h6>
+                    <p class="small text-muted mb-3">ใส่รหัสผ่านเพื่อเข้าใช้งานหน้าตั้งค่า Sheet & API</p>
+                    
+                    <div class="mb-3">
+                        <input type="password" id="settingsPinInput" class="form-control form-control-lg text-center fs-4 letter-spacing" placeholder="•••••" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter') verifySettingsPin()">
+                        <div id="authPinError" class="text-danger small mt-2 fw-semibold" style="display: none;">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold" onclick="verifySettingsPin()">
+                        <i class="fa-solid fa-unlock me-1"></i> ยืนยันรหัสผ่าน
+                    </button>
                 </div>
             </div>
         </div>
