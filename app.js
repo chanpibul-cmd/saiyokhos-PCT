@@ -8,7 +8,7 @@
 // Global Configuration
 const APP_CONFIG = {
     SHEET_ID: '1HROsaR5cYs0X-Cv9wxovhsJ3CamliQYHLe-HvedRlw0',
-    LOCAL_DATA_PATH: 'data/data.json',
+    LOCAL_DATA_PATH: 'data.json',
     DEFAULT_GROUP: 'all',
     THEME_STORAGE_KEY: 'pct_dashboard_theme',
     APPSCRIPT_STORAGE_KEY: 'pct_appscript_url',
@@ -162,12 +162,15 @@ async function loadDashboardData(forceRefresh = false) {
         }
     }
 
-    // 3. Fallback to bundled local JSON snapshot
+    // 3. Fallback to bundled local JSON snapshot (ลอง data.json และ data/data.json)
     if (!loaded) {
         try {
             console.log('Loading bundled local JSON snapshot...');
-            const resp = await fetch(APP_CONFIG.LOCAL_DATA_PATH + '?v=' + Date.now());
-            if (resp.ok) {
+            let resp = await fetch('data.json?v=' + Date.now()).catch(() => null);
+            if (!resp || !resp.ok) {
+                resp = await fetch('data/data.json?v=' + Date.now()).catch(() => null);
+            }
+            if (resp && resp.ok) {
                 const json = await resp.json();
                 STATE.rawData = json;
                 STATE.dataSource = 'local';

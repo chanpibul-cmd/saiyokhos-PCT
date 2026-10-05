@@ -20,8 +20,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Custom Style -->
-    <link rel="stylesheet" href="css/style.css">
+    <!-- Custom Style (รองรับทั้งวางไฟล์ที่ root และในโฟลเดอร์ css/) -->
+    <link rel="stylesheet" href="style.css" id="mainStyleLink">
+    <script>
+        const styleLink = document.getElementById('mainStyleLink');
+        styleLink.onerror = () => { styleLink.href = 'css/style.css'; };
+    </script>
 </head>
 <body>
 
@@ -675,8 +679,15 @@
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- App Logic -->
-    <script src="js/app.js"></script>
-
+    <!-- App Logic (รองรับทั้งวางไฟล์ที่ root และในโฟลเดอร์ js/) -->
+    <script src="app.js" id="mainAppScript"></script>
+    <script>
+        const appScript = document.getElementById('mainAppScript');
+        appScript.onerror = () => {
+            const fallback = document.createElement('script');
+            fallback.src = 'js/app.js';
+            document.body.appendChild(fallback);
+        };
+    </script>
 </body>
 </html>
