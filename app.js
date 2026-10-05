@@ -696,7 +696,7 @@ function renderTracerHighlights(items) {
             kpiItem = items.find(i => i.kpi.includes(cfg.title) || cfg.title.includes(i.kpi.substring(0, 15)));
         }
 
-        const title = cfg.title || (kpiItem ? kpiItem.kpi : `จุดเน้นที่ ${idx + 1}`);
+        const title = (kpiItem && kpiItem.kpi) ? kpiItem.kpi : (cfg.title || `จุดเน้นที่ ${idx + 1}`);
         const val = kpiItem ? (kpiItem.avg || (kpiItem.computed_avg !== null ? kpiItem.computed_avg : '-')) : '-';
         const target = kpiItem ? (kpiItem.target || cfg.default_target || '') : (cfg.default_target || '');
         const status = kpiItem ? kpiItem.status : 'normal';
@@ -725,10 +725,16 @@ function renderTracerHighlights(items) {
 
         return `
             <div class="col-lg-2 col-md-4 col-6">
-                <div class="card card-custom p-3 text-center h-100" style="cursor: pointer; transition: transform 0.2s;" onclick="if('${kpiId}') openKpiModal('${kpiId}')" title="คลิกเพื่อดูรายละเอียด 12 เดือน">
-                    <div class="small text-muted mb-1 text-truncate" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
-                    <h4 class="fw-bold mb-0 ${valColorClass}">${escapeHtml(valDisplay)}</h4>
-                    ${badgeHtml}
+                <div class="card card-custom p-3 text-center h-100 d-flex flex-column justify-content-between" style="cursor: pointer; transition: transform 0.2s;" onclick="if('${kpiId}') openKpiModal('${kpiId}')" title="${escapeHtml(title)}&#10;(คลิกเพื่อดูรายละเอียด 12 เดือน)">
+                    <div class="mb-2">
+                        <div class="small text-muted fw-semibold" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 38px; line-height: 1.25;" title="${escapeHtml(title)}">
+                            ${escapeHtml(title)}
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 ${valColorClass}">${escapeHtml(valDisplay)}</h4>
+                        ${badgeHtml}
+                    </div>
                 </div>
             </div>
         `;
@@ -1179,6 +1185,9 @@ function renderHighlightSettings() {
     let html = '';
     for (let slot = 1; slot <= 6; slot++) {
         const currentCfg = configs[slot - 1] || { slot: slot, kpi_id: '', title: '' };
+        const currentKpi = items.find(i => i.id === currentCfg.kpi_id);
+        const displayTitle = currentKpi ? currentKpi.kpi : (currentCfg.title || '');
+        const displayTarget = currentKpi ? (currentKpi.target ? `เกณฑ์: ${currentKpi.target}` : '') : '';
         
         let optionsHtml = '<option value="">-- เลือกตัวชี้วัด --</option>';
         Object.keys(groups).forEach(g => {
@@ -1192,20 +1201,24 @@ function renderHighlightSettings() {
 
         html += `
             <div class="col-xl-4 col-md-6">
-                <div class="highlight-slot-card">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-primary-subtle text-primary fw-bold">การ์ดที่ ${slot}</span>
-                        <small class="text-muted">Slot ${slot}</small>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small text-muted mb-1">เลือกตัวชี้วัดจาก data2026:</label>
-                        <select id="slot_kpi_${slot}" class="form-select form-select-sm" onchange="onSlotKpiChange(${slot})">
-                            ${optionsHtml}
-                        </select>
+                <div class="highlight-slot-card h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary-subtle text-primary fw-bold">การ์ดที่ ${slot}</span>
+                            <span class="badge bg-secondary-subtle text-secondary" id="slot_target_${slot}">${escapeHtml(displayTarget)}</span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1">เลือกตัวชี้วัดจาก data2026:</label>
+                            <select id="slot_kpi_${slot}" class="form-select form-select-sm" onchange="onSlotKpiChange(${slot})">
+                                ${optionsHtml}
+                            </select>
+                        </div>
                     </div>
                     <div>
-                        <label class="form-label small text-muted mb-1">ชื่อหัวข้อแสดงบนการ์ด:</label>
-                        <input type="text" id="slot_title_${slot}" class="form-control form-control-sm" value="${escapeHtml(currentCfg.title || '')}" placeholder="ใส่ชื่อสั้น ๆ เพื่อแสดงบนการ์ด">
+                        <label class="form-label small text-muted mb-1">ชื่อหัวข้อแสดงบนการ์ด (ดึงจากตัวชี้วัดอัตโนมัติ):</label>
+                        <div class="p-2 rounded bg-body-tertiary border small" id="slot_preview_${slot}" style="min-height: 44px; line-height: 1.35; word-break: break-word;">
+                            ${displayTitle ? `<i class="fa-solid fa-tag text-primary me-1"></i><span class="text-body fw-medium">${escapeHtml(displayTitle)}</span>` : `<span class="text-muted fst-italic"><i class="fa-solid fa-arrow-up me-1"></i>โปรดเลือกตัวชี้วัดด้านบน</span>`}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1217,15 +1230,21 @@ function renderHighlightSettings() {
 
 function onSlotKpiChange(slot) {
     const select = document.getElementById(`slot_kpi_${slot}`);
-    const titleInput = document.getElementById(`slot_title_${slot}`);
-    if (!select || !titleInput) return;
+    const previewDiv = document.getElementById(`slot_preview_${slot}`);
+    const targetBadge = document.getElementById(`slot_target_${slot}`);
+    if (!select || !previewDiv) return;
 
     const selectedId = select.value;
-    if (!selectedId) return;
+    if (!selectedId) {
+        previewDiv.innerHTML = '<span class="text-muted fst-italic"><i class="fa-solid fa-arrow-up me-1"></i>โปรดเลือกตัวชี้วัดด้านบน</span>';
+        if (targetBadge) targetBadge.textContent = '';
+        return;
+    }
 
     const item = (STATE.rawData.data2026 || []).find(i => i.id === selectedId);
-    if (item && (!titleInput.value || titleInput.value.trim() === '')) {
-        titleInput.value = item.kpi.substring(0, 30);
+    if (item) {
+        previewDiv.innerHTML = `<i class="fa-solid fa-tag text-primary me-1"></i><span class="text-body fw-medium">${escapeHtml(item.kpi)}</span>`;
+        if (targetBadge) targetBadge.textContent = item.target ? `เกณฑ์: ${item.target}` : '';
     }
 }
 
@@ -1233,9 +1252,18 @@ function applyHighlightPreset(presetName) {
     const preset = DEFAULT_HIGHLIGHT_PRESETS[presetName];
     if (!preset) return;
 
-    localStorage.setItem('pct_custom_highlights', JSON.stringify(preset));
+    const items = STATE.rawData.data2026 || [];
+    const hydratedPreset = preset.map(p => {
+        const item = items.find(i => i.id === p.kpi_id);
+        return {
+            ...p,
+            title: item ? item.kpi : (p.title || '')
+        };
+    });
+
+    localStorage.setItem('pct_custom_highlights', JSON.stringify(hydratedPreset));
     renderHighlightSettings();
-    renderTracerHighlights(STATE.rawData.data2026 || []);
+    renderTracerHighlights(items);
     showToast(`ใช้ชุดตัวชี้วัดแนะนำ: ${getPresetLabel(presetName)} แล้ว`, 'success');
 }
 
@@ -1255,25 +1283,29 @@ function saveHighlightSettings() {
 
     for (let slot = 1; slot <= 6; slot++) {
         const select = document.getElementById(`slot_kpi_${slot}`);
-        const titleInput = document.getElementById(`slot_title_${slot}`);
         const kpiId = select ? select.value : '';
-        let title = titleInput ? titleInput.value.trim() : '';
+        let title = '';
+        let defaultTarget = '';
 
-        if (!title && kpiId) {
+        if (kpiId) {
             const item = items.find(i => i.id === kpiId);
-            if (item) title = item.kpi.substring(0, 30);
+            if (item) {
+                title = item.kpi;
+                defaultTarget = item.target || '';
+            }
         }
 
         newConfigs.push({
             slot: slot,
             kpi_id: kpiId,
-            title: title || `จุดเน้นที่ ${slot}`
+            title: title || `จุดเน้นที่ ${slot}`,
+            default_target: defaultTarget
         });
     }
 
     localStorage.setItem('pct_custom_highlights', JSON.stringify(newConfigs));
     renderTracerHighlights(items);
-    showToast('บันทึกจุดเน้นคุณภาพเรียบร้อยแล้ว แสดงผลในหน้าแรกทันที', 'success');
+    showToast('บันทึกจุดเน้นคุณภาพเรียบร้อยแล้ว (ชื่อหัวข้อนำมาจากตัวชี้วัด)', 'success');
 }
 
 function resetHighlightDefaults() {
